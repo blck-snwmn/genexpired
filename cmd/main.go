@@ -9,6 +9,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
 )
@@ -102,23 +103,31 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// ast.Print(nil, node)
-	f := buildMethod("c", "Claim")
+	// ast.Print(fset, node)
+	// f := buildMethod("c", "Claim")
 	exists := false
 	astutil.Apply(node, nil, func(c *astutil.Cursor) bool {
 		n := c.Node()
 		switch x := n.(type) {
 		case *ast.FuncDecl:
 			if x.Name.Name == "Expired" && x.Recv != nil {
+				var typ string
+				switch t := x.Recv.List[0].Type.(type) {
+				case *ast.Ident:
+					typ = t.Name
+				case *ast.StarExpr:
+					typ = t.X.(*ast.Ident).Name
+				}
+
 				exists = true
 				fmt.Println("in")
-				c.Replace(f)
+				c.Replace(buildMethod(strings.ToLower(typ)[0:1], typ))
 			}
 		}
 		return true
 	})
 	if !exists {
-		node.Decls = append(node.Decls, f)
+		// node.Decls = append(node.Decls, f)
 	}
 	ff, err := os.Create(source)
 	if err != nil {
