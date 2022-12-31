@@ -84,9 +84,13 @@ func buildMethod(reciverName, reciverType string) *ast.FuncDecl {
 	}
 }
 
-func main() {
-	var source string
+var source string
+
+func init() {
 	flag.StringVar(&source, "source", "", "")
+}
+
+func main() {
 	flag.Parse()
 
 	if source == "" {
