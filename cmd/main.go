@@ -104,30 +104,41 @@ func main() {
 		panic(err)
 	}
 	// ast.Print(fset, node)
-	// f := buildMethod("c", "Claim")
-	exists := false
+	m := map[string]bool{}
 	astutil.Apply(node, nil, func(c *astutil.Cursor) bool {
 		n := c.Node()
 		switch x := n.(type) {
 		case *ast.FuncDecl:
 			if x.Name.Name == "Expired" && x.Recv != nil {
-				var typ string
+				var structName string
 				switch t := x.Recv.List[0].Type.(type) {
 				case *ast.Ident:
-					typ = t.Name
+					structName = t.Name
 				case *ast.StarExpr:
-					typ = t.X.(*ast.Ident).Name
+					structName = t.X.(*ast.Ident).Name
 				}
-
-				exists = true
+				m[structName] = true
 				fmt.Println("in")
-				c.Replace(buildMethod(strings.ToLower(typ)[0:1], typ))
+				c.Replace(buildMethod(strings.ToLower(structName)[0:1], structName))
 			}
+		case *ast.TypeSpec:
+			if _, ok := x.Type.(*ast.StructType); !ok {
+				return true
+			}
+			structName := x.Name.Name
+			_, ok := m[structName]
+			if !ok {
+				// なければ追加する
+				m[structName] = false
+			}
+			fmt.Println(structName)
 		}
 		return true
 	})
-	if !exists {
-		// node.Decls = append(node.Decls, f)
+	for structName, v := range m {
+		if !v {
+			node.Decls = append(node.Decls, buildMethod(strings.ToLower(structName)[0:1], structName))
+		}
 	}
 	ff, err := os.Create(source)
 	if err != nil {
