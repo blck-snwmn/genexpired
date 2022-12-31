@@ -13,6 +13,70 @@ import (
 	"golang.org/x/tools/go/ast/astutil"
 )
 
+var source string
+
+func init() {
+	flag.StringVar(&source, "source", "", "")
+}
+
+func main() {
+	flag.Parse()
+
+	if source == "" {
+		panic("no source")
+	}
+	if _, err := os.Stat(source); errors.Is(err, os.ErrNotExist) {
+		panic("no source")
+	}
+
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, source, nil, parser.AllErrors+parser.ParseComments)
+	if err != nil {
+		panic(err)
+	}
+	// ast.Print(fset, node)
+	m := map[string]bool{}
+	astutil.Apply(node, nil, func(c *astutil.Cursor) bool {
+		n := c.Node()
+		switch x := n.(type) {
+		case *ast.FuncDecl:
+			if x.Name.Name == "Expired" && x.Recv != nil {
+				var structName string
+				switch t := x.Recv.List[0].Type.(type) {
+				case *ast.Ident:
+					structName = t.Name
+				case *ast.StarExpr:
+					structName = t.X.(*ast.Ident).Name
+				}
+				m[structName] = true
+				c.Replace(buildMethod(strings.ToLower(structName)[0:1], structName))
+			}
+		case *ast.TypeSpec:
+			if _, ok := x.Type.(*ast.StructType); !ok {
+				return true
+			}
+			structName := x.Name.Name
+			_, ok := m[structName]
+			if !ok {
+				// なければ追加する
+				m[structName] = false
+			}
+		}
+		return true
+	})
+	for structName, v := range m {
+		if !v {
+			node.Decls = append(node.Decls, buildMethod(strings.ToLower(structName)[0:1], structName))
+		}
+	}
+	ff, err := os.Create(source)
+	if err != nil {
+		panic(err)
+	}
+
+	format.Node(ff, fset, node)
+}
+
 func buildMethod(reciverName, reciverType string) *ast.FuncDecl {
 	return &ast.FuncDecl{
 		Recv: &ast.FieldList{
@@ -82,68 +146,4 @@ func buildMethod(reciverName, reciverType string) *ast.FuncDecl {
 			},
 		},
 	}
-}
-
-var source string
-
-func init() {
-	flag.StringVar(&source, "source", "", "")
-}
-
-func main() {
-	flag.Parse()
-
-	if source == "" {
-		panic("no source")
-	}
-	if _, err := os.Stat(source); errors.Is(err, os.ErrNotExist) {
-		panic("no source")
-	}
-
-	fset := token.NewFileSet()
-	node, err := parser.ParseFile(fset, source, nil, parser.AllErrors+parser.ParseComments)
-	if err != nil {
-		panic(err)
-	}
-	// ast.Print(fset, node)
-	m := map[string]bool{}
-	astutil.Apply(node, nil, func(c *astutil.Cursor) bool {
-		n := c.Node()
-		switch x := n.(type) {
-		case *ast.FuncDecl:
-			if x.Name.Name == "Expired" && x.Recv != nil {
-				var structName string
-				switch t := x.Recv.List[0].Type.(type) {
-				case *ast.Ident:
-					structName = t.Name
-				case *ast.StarExpr:
-					structName = t.X.(*ast.Ident).Name
-				}
-				m[structName] = true
-				c.Replace(buildMethod(strings.ToLower(structName)[0:1], structName))
-			}
-		case *ast.TypeSpec:
-			if _, ok := x.Type.(*ast.StructType); !ok {
-				return true
-			}
-			structName := x.Name.Name
-			_, ok := m[structName]
-			if !ok {
-				// なければ追加する
-				m[structName] = false
-			}
-		}
-		return true
-	})
-	for structName, v := range m {
-		if !v {
-			node.Decls = append(node.Decls, buildMethod(strings.ToLower(structName)[0:1], structName))
-		}
-	}
-	ff, err := os.Create(source)
-	if err != nil {
-		panic(err)
-	}
-
-	format.Node(ff, fset, node)
 }
