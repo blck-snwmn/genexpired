@@ -1,4 +1,3 @@
-//go:generate go build  -o genexpired ../cmd/main.go
 //go:generate ./genexpired --source=$GOFILE
 package example
 
