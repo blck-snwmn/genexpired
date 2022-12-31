@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -96,7 +95,6 @@ func main() {
 	if _, err := os.Stat(source); errors.Is(err, os.ErrNotExist) {
 		panic("no source")
 	}
-	fmt.Println("do1")
 
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, source, nil, parser.AllErrors+parser.ParseComments)
@@ -118,7 +116,6 @@ func main() {
 					structName = t.X.(*ast.Ident).Name
 				}
 				m[structName] = true
-				fmt.Println("in")
 				c.Replace(buildMethod(strings.ToLower(structName)[0:1], structName))
 			}
 		case *ast.TypeSpec:
@@ -131,7 +128,6 @@ func main() {
 				// なければ追加する
 				m[structName] = false
 			}
-			fmt.Println(structName)
 		}
 		return true
 	})
