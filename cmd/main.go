@@ -49,7 +49,7 @@ func main() {
 					structName = t.X.(*ast.Ident).Name
 				}
 				m[structName] = true
-				c.Replace(buildMethod(strings.ToLower(structName)[0:1], structName))
+				c.Replace(buildMethod(structName))
 			}
 		case *ast.TypeSpec:
 			if _, ok := x.Type.(*ast.StructType); !ok {
@@ -66,7 +66,7 @@ func main() {
 	})
 	for structName, v := range m {
 		if !v {
-			node.Decls = append(node.Decls, buildMethod(strings.ToLower(structName)[0:1], structName))
+			node.Decls = append(node.Decls, buildMethod(structName))
 		}
 	}
 	ff, err := os.Create(source)
@@ -77,7 +77,8 @@ func main() {
 	format.Node(ff, fset, node)
 }
 
-func buildMethod(reciverName, reciverType string) *ast.FuncDecl {
+func buildMethod(reciverType string) *ast.FuncDecl {
+	reciverName := strings.ToLower(reciverType)[0:1]
 	return &ast.FuncDecl{
 		Recv: &ast.FieldList{
 			List: []*ast.Field{
