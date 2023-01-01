@@ -3,6 +3,14 @@ package example
 
 import "time"
 
+type IClaim interface {
+}
+
+type (
+	XClaim struct {
+		expireAt time.Time
+	}
+)
 type Claim struct {
 	expireAt time.Time
 }
